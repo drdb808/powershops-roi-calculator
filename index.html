@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PowerShops ROI Calculator by Create One</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-red': '#ED2F48', // Crimson for key metrics/benefits
+              'brand-carmine': '#AF222A', // Carmine for headings
+              'brand-dark-gray': '#58585B', // Darker gray for cost charts
+              'brand-typography': '#404041', // 90% Black for all main body text
+              'brand-medium-text': '#6D6E70', // A visible medium grey for secondary text
+              'brand-medium-gray': '#DBDCDE', // Neutral gray for borders
+              'brand-light-gray': '#F1F1F2', // Backgrounds
+              'brand-dark-text': '#404041', // Re-aliased to Typography Black
+              'brand-border': '#DBDCDE',
+            },
+          },
+        },
+      }
+    </script>
+<style>
+  .range-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #ED2F48; /* brand-red */
+    cursor: pointer;
+    border-radius: 50%;
+    margin-top: -8px; /* Center thumb on track */
+  }
+
+  .range-thumb::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #ED2F48; /* brand-red */
+    cursor: pointer;
+    border-radius: 50%;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.546.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.3",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1"
+  }
+}
+</script>
+</head>
+<body class="bg-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

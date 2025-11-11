@@ -1,0 +1,5 @@
+{
+  "name": "PowerShops ROI Calculator",
+  "description": "An interactive ROI calculator for the PowerShops product. Users can adjust assumptions to see potential financial benefits, and get AI-powered insights.",
+  "requestFramePermissions": []
+}

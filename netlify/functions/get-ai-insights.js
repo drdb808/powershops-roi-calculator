@@ -1,4 +1,5 @@
 // File: netlify/functions/get-ai-insights.js
+const { GoogleGenAI } = require("@google/genai");
 
 exports.handler = async function(event) {
   // Only allow POST requests
@@ -7,7 +8,6 @@ exports.handler = async function(event) {
   }
 
   const { API_KEY } = process.env;
-  const MODEL_NAME = "gemini-2.5-flash"; // Using the same model as the frontend
 
   if (!API_KEY) {
     console.error("API_KEY is not set in Netlify environment variables.");
@@ -27,46 +27,26 @@ exports.handler = async function(event) {
       };
     }
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+    // Initialize the official Google GenAI SDK
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-    const requestBody = {
-      contents: [{
-        parts: [{ "text": userPrompt }]
-      }],
-      systemInstruction: {
-        parts: [{ "text": systemInstruction }]
-      }
-    };
-
-    const apiResponse = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
+    // Call the Gemini API using the SDK for a more reliable interaction
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: userPrompt,
+        config: {
+            systemInstruction: systemInstruction,
+        },
     });
 
-    if (!apiResponse.ok) {
-        const errorBody = await apiResponse.json();
-        console.error("Error from Gemini API:", errorBody);
-        const errorMessage = errorBody?.error?.message || `API request failed with status ${apiResponse.status}`;
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: errorMessage })
-        };
-    }
-    
-    const responseData = await apiResponse.json();
-    
-    // Extract the text from the API response
-    // The response structure is { candidates: [ { content: { parts: [ { text: "..." } ] } } ] }
-    const insights = responseData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // The SDK provides a simple '.text' property to get the response.
+    const insights = response.text;
 
     if (!insights) {
-        console.error("Could not extract insights from Gemini API response:", responseData);
+        console.error("Could not extract insights from Gemini API response:", response);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Received an unexpected response from the AI service." })
+            body: JSON.stringify({ error: "Received an unexpected or empty response from the AI service." })
         };
     }
 
@@ -77,9 +57,10 @@ exports.handler = async function(event) {
 
   } catch (error) {
     console.error("Critical error in get-ai-insights function:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown internal error occurred.";
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "An internal server error occurred while generating insights." }),
+      body: JSON.stringify({ error: `An internal server error occurred while generating insights. Details: ${errorMessage}` }),
     };
   }
 };

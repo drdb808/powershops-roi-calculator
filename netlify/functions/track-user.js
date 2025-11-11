@@ -1,25 +1,49 @@
 // File: netlify/functions/track-user.js
 
 exports.handler = async function(event) {
-  // This function only accepts POST requests.
+  // This function only accepts POST requests from the frontend.
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  // Get the Google Apps Script URL from environment variables.
+  const { GOOGLE_APPS_SCRIPT_URL } = process.env;
+
   try {
     const userData = JSON.parse(event.body);
-
-    // --- This is where you "track" the user details ---
-
-    // For now, we'll simply log the data. You can view these logs
-    // in your Netlify site dashboard under the "Functions" tab.
+    // Log the data for debugging and as a backup.
     console.log("New ROI Calculator Lead:", userData);
 
-    // In a real-world scenario, you could send this data to another service:
-    // - Add a row to a Google Sheet
-    // - Create a contact in a CRM like HubSpot
-    // - Save the user to a database
+    if (!GOOGLE_APPS_SCRIPT_URL) {
+      console.error("Function Configuration Error: GOOGLE_APPS_SCRIPT_URL is not set.");
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: "Data logged but could not be sent to Google Sheets." }),
+      };
+    }
 
+    // --- NEW STRATEGY: Send data as URL query parameters in a GET request ---
+    // This avoids the POST-to-GET redirect issue with Google Apps Script.
+    const queryParams = new URLSearchParams({
+        // Sanitize data by using || '' to ensure we don't send 'undefined'
+        firstName: userData['first-name'] || '',
+        lastName: userData['last-name'] || '',
+        email: userData['business-email'] || '',
+        company: userData['company'] || '',
+        phone: userData['telephone'] || ''
+    });
+
+    const requestUrl = `${GOOGLE_APPS_SCRIPT_URL}?${queryParams.toString()}`;
+
+    // Make a simple GET request.
+    const response = await fetch(requestUrl);
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error from Google Apps Script: ${response.status} ${response.statusText}`, errorBody);
+    }
+    
+    // Always return a success response to the frontend client to ensure the UI transitions smoothly.
     return {
       statusCode: 200,
       body: JSON.stringify({ message: "Data received successfully." }),

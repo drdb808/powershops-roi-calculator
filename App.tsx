@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { ArrowLeft, ArrowRight, BrainCircuit, Download, Users, TrendingUp, FileText, Loader2, Sparkles, RefreshCw } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -462,7 +461,7 @@ export const App: React.FC = () => {
         setIsLoadingAi(true);
         setAiInsights('');
         setIsRefreshDisabled(true);
-        
+
         const systemInstruction = `
             You are a business analyst providing a professional summary of a Return on Investment (ROI) calculation for "PowerShops".
             Your response must be structured into three specific sections, using Markdown for bold headings. **Each section must be a single, concise paragraph (2-3 sentences max).**
@@ -484,22 +483,28 @@ export const App: React.FC = () => {
         `;
 
         try {
-            if (!process.env.API_KEY) throw new Error("API key is not configured.");
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: userPrompt,
-                config: { systemInstruction: systemInstruction },
+            // New: Call the Netlify function instead of Gemini directly
+            const response = await fetch('/.netlify/functions/get-ai-insights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userPrompt, systemInstruction }),
             });
-            setAiInsights(response.text);
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Use the error message from the function's response if available
+                throw new Error(data.error || `Server error: ${response.status}`);
+            }
+
+            setAiInsights(data.insights);
+
         } catch (error) {
             console.error("Error fetching AI insights:", error);
-            const errorString = String(error);
-            const isRateLimitError = errorString.includes("429") || errorString.includes("RESOURCE_EXHAUSTED");
             setAiInsights(
-                isRateLimitError
-                    ? "You have exceeded the API rate limit. Please wait a moment and try again."
-                    : "We're sorry, but we were unable to generate AI insights at this time. Please check your configuration and try again."
+                error instanceof Error 
+                    ? `We're sorry, an error occurred: ${error.message}`
+                    : "An unknown error occurred while generating insights."
             );
         } finally {
             setIsLoadingAi(false);

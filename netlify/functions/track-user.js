@@ -1,7 +1,7 @@
 // File: netlify/functions/track-user.js
 
 exports.handler = async function(event) {
-  // This function now primarily handles POST requests from the frontend form.
+  // This function must be triggered by a POST request from the frontend form.
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -13,16 +13,17 @@ exports.handler = async function(event) {
     console.log("New ROI Calculator Lead:", userData);
 
     if (!GOOGLE_APPS_SCRIPT_URL) {
-      console.error("Function Configuration Error: GOOGLE_APPS_SCRIPT_URL is not set.");
-      // Still return success to the user, as the lead is logged.
+      console.error("Function Configuration Error: GOOGLE_APPS_SCRIPT_URL is not set in Netlify.");
+      // This is a server-side configuration issue. We still tell the user it was successful
+      // because the lead is captured in these logs.
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: "Data logged but could not be sent to Google Sheets." }),
+        body: JSON.stringify({ message: "Data logged but could not be sent to Sheets due to missing config." }),
       };
     }
 
-    // --- ROBUST STRATEGY: Send data as URL query parameters in a GET request ---
-    // This is a reliable workaround for the POST-to-GET redirect issue with Google Apps Script.
+    // --- STRATEGY: Send data as URL query parameters in a GET request ---
+    // This avoids the POST-to-GET redirect issue with Google Apps Script.
     const queryParams = new URLSearchParams({
         firstName: userData['first-name'] || '',
         lastName: userData['last-name'] || '',
@@ -33,28 +34,35 @@ exports.handler = async function(event) {
 
     const requestUrl = `${GOOGLE_APPS_SCRIPT_URL}?${queryParams.toString()}`;
 
+    // --- DIAGNOSTIC LOGGING ---
+    console.log("Constructed Google Apps Script URL:", requestUrl);
+
     // Make the GET request to the Google Apps Script.
     const response = await fetch(requestUrl);
+    const responseBody = await response.text();
+
+    // --- DIAGNOSTIC LOGGING ---
+    console.log(`Google Apps Script Response Status: ${response.status}`);
+    console.log("Google Apps Script Response Body:", responseBody);
 
     if (!response.ok) {
-        const errorBody = await response.text();
         // Log the error for debugging but don't block the user.
-        console.error(`Error from Google Apps Script: ${response.status} ${response.statusText}`, errorBody);
+        console.error(`Error from Google Apps Script: ${response.status} ${response.statusText}`, responseBody);
     }
     
     // Always return a success response to the frontend client. This ensures a smooth user experience
-    // even if the Google Sheets integration has a problem. The lead is still captured in the Netlify logs.
+    // even if the Google Sheets integration has a problem. The lead is still captured in Netlify logs.
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Data received successfully." }),
+      body: JSON.stringify({ message: "Data received and processed." }),
     };
 
   } catch (error) {
-    console.error("Error processing submission:", error);
-    // Return a generic server error but don't expose details to the client.
+    console.error("Critical Error in track-user function:", error);
+    // Return a generic server error.
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "There was an error processing your submission." }),
+      body: JSON.stringify({ error: "An internal error occurred." }),
     };
   }
 };
